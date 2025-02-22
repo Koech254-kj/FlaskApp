@@ -5,10 +5,17 @@ import csv
 app = Flask(__name__)
 
 # MongoDB Connection
-client = MongoClient("mongodb://localhost:27017/")  # Ensure MongoDB is running
-db = client.user_data_db  # Database name
-collection = db.users  # Collection name
+MONGO_URI = "mongodb+srv://kgeorgekoech:<password>@cluster0.u0ezy.mongodb.net/FlaskApp?retryWrites=true&w=majority&appName=Cluster0"
+client = MongoClient(MONGO_URI)
+db = client["user_data_db"]
+collection = db["users"]
 
+try:
+    print("Connected to MongoDB successfully!")
+except Exception as e:
+    print(f"Error: Unable to connect to MongoDB - {e}")
+
+# User Class
 class User:
     def __init__(self, age, gender, total_income, expenses):
         self.age = age
@@ -24,16 +31,20 @@ class User:
             **self.expenses
         }
 
+# CSV Function
 def save_to_csv():
     with open('user_data.csv', mode='w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(["Age", "Gender", "Total Income", "Utilities", "Entertainment", "School Fees", "Shopping", "Healthcare"])
         for user in collection.find():
-            writer.writerow([user['age'], user['gender'], user['total_income'],
-                             user['expenses'].get('utilities', 0), user['expenses'].get('entertainment', 0),
-                             user['expenses'].get('school_fees', 0), user['expenses'].get('shopping', 0),
-                             user['expenses'].get('healthcare', 0)])
+            writer.writerow([
+                user['age'], user['gender'], user['total_income'],
+                user['expenses'].get('utilities', 0), user['expenses'].get('entertainment', 0),
+                user['expenses'].get('school_fees', 0), user['expenses'].get('shopping', 0),
+                user['expenses'].get('healthcare', 0)
+            ])
 
+# Flask Routes
 @app.route('/', methods=['GET', 'POST'])
 def index():
     if request.method == 'POST':
@@ -55,5 +66,6 @@ def index():
     
     return render_template('index.html')
 
-if __name__ == '__main__':
-    app.run(debug=True)
+if __name__ == "__main__":
+    from waitress import serve  # Production-ready server
+    serve(app, host="0.0.0.0", port=5000)
